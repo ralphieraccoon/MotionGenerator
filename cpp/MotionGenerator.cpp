@@ -1,220 +1,184 @@
 #include "MotionGenerator.h"
+#include <cmath>
 
-MotionGenerator::MotionGenerator(float aMaxVel, float aMaxAcc, float aInitPos)
-		: maxVel(aMaxVel), maxAcc(aMaxAcc), initPos(aInitPos)
-{
-	init();
+MotionGenerator::MotionGenerator(double aMaxvel_, double aMaxacc_,
+                                 double aInitpos_)
+    : maxvel_(aMaxvel_), maxacc_(aMaxacc_), initpos_(aInitpos_) {
+  init();
 }
 
+void MotionGenerator::init() {
+  // State variables
+  reset();
 
-void MotionGenerator::init() {	
-	// Time variables
-    oldTime = millis();
-    lastTime = oldTime;
-    deltaTime = 0;	
-	
-	// State variables
-	reset();	
-	
-	// Misc
-	signM = 1;		// 1 = positive change, -1 = negative change
-	shape = true;   // true = trapezoidal, false = triangular
-	isFinished = false;
+  // Misc
+  signm_ = 1;    // 1 = pos_itive change, -1 = negative change
+  shape_ = true; // true = trapezoidal, false = triangular
+  isfinished_ = false;
 }
 
-float MotionGenerator::update(float posRef) {	
-		
-	if (oldPosRef != posRef)  // reference changed
-	{
-		isFinished = false;
-		// Shift state variables
-		oldPosRef = posRef;
-		oldPos = pos;
-		oldVel = vel;
-		oldTime = lastTime;
-		
-		// Calculate braking time and distance (in case is neeeded)
-		tBrk = abs(oldVel) / maxAcc;
-		dBrk = tBrk * abs(oldVel) / 2;
-		
-		// Caculate Sign of motion
-		signM = sign(posRef - (oldPos + sign(oldVel)*dBrk));
-		
-		if (signM != sign(oldVel))  // means brake is needed
-		{
-			tAcc = (maxVel / maxAcc);
-			dAcc = tAcc * (maxVel / 2);
-		}
-		else
-		{
-			tBrk = 0;
-			dBrk = 0;
-			tAcc = (maxVel - abs(oldVel)) / maxAcc;
-			dAcc = tAcc * (maxVel + abs(oldVel)) / 2;
-		}
-		
-		// Calculate total distance to go after braking
-		dTot = abs(posRef - oldPos + signM*dBrk);
-		
-		tDec = maxVel / maxAcc;
-		dDec = tDec * (maxVel) / 2;
-		dVel = dTot - (dAcc + dDec);
-		tVel = dVel / maxVel;
-		
-		if (tVel > 0)    // trapezoidal shape
-			shape = true;
-		else             // triangular shape
-		{
-			shape = false;
-			// Recalculate distances and periods
-			if (signM != sign(oldVel))  // means brake is needed
-			{
-				velSt = sqrt(maxAcc*(dTot));
-				tAcc = (velSt / maxAcc);
-				dAcc = tAcc * (velSt / 2);
-			}
-			else
-			{
-				tBrk = 0;
-				dBrk = 0;
-				dTot = abs(posRef - oldPos);      // recalculate total distance
-				velSt = sqrt(0.5*oldVel*oldVel + maxAcc*dTot);
-				tAcc = (velSt - abs(oldVel)) / maxAcc;
-				dAcc = tAcc * (velSt + abs(oldVel)) / 2;
-			}
-			tDec = velSt / maxAcc;
-			dDec = tDec * (velSt) / 2;
-		}
-		
-	}
-	
-	unsigned long time = millis();		// current time
-	// Calculate time since last set-point change
-	deltaTime = (time - oldTime);
-	// Calculate new setpoint
-	calculateTrapezoidalProfile(posRef);
-	// Update last time
-	lastTime = time;
-	
-	//calculateTrapezoidalProfile(setpoint);
-	return pos;
+double MotionGenerator::setPositionRef(double pos_Ref) {
+
+  if (posref_ != pos_Ref) // reference changed
+  {
+    isfinished_ = false;
+    // Shift state variables
+    posref_ = pos_Ref;
+    oldpos_ = pos_;
+    oldvel_ = vel_;
+
+    // Calculate braking time and distance (in case is neeeded)
+    tbrk_ = std::abs(oldvel_) / maxacc_;
+    dbrk_ = tbrk_ * std::abs(oldvel_) / 2;
+
+    // Caculate Sign of motion
+    signm_ = sign(pos_Ref - (oldpos_ + sign(oldvel_) * dbrk_));
+
+    if (signm_ != sign(oldvel_)) // means brake is needed
+    {
+      tacc_ = (maxvel_ / maxacc_);
+      dacc_ = tacc_ * (maxvel_ / 2);
+    } else {
+      tbrk_ = 0;
+      dbrk_ = 0;
+      tacc_ = (maxvel_ - abs(oldvel_)) / maxacc_;
+      dacc_ = tacc_ * (maxvel_ + abs(oldvel_)) / 2;
+    }
+
+    // Calculate total distance to go after braking
+    dtot_ = std::abs(pos_Ref - oldpos_ + signm_ * dbrk_);
+
+    tdec_ = maxvel_ / maxacc_;
+    ddec_ = tdec_ * (maxvel_) / 2;
+    dvel_ = dtot_ - (dacc_ + ddec_);
+    tvel_ = dvel_ / maxvel_;
+
+    if (tvel_ > 0) // trapezoidal shape
+      shape_ = true;
+    else // triangular shape
+    {
+      shape_ = false;
+      // Recalculate distances and periods
+      if (signm_ != (oldvel_ > 0) - (oldvel_ < 0)) // means brake is needed
+      {
+        vels_t_ = std::sqrt(maxacc_ * (dtot_));
+        tacc_ = (vels_t_ / maxacc_);
+        dacc_ = tacc_ * (vels_t_ / 2);
+      } else {
+        tbrk_ = 0;
+        dbrk_ = 0;
+        dtot_ = std::abs(pos_Ref - oldpos_); // recalculate total distance
+        vels_t_ = std::sqrt(0.5 * oldvel_ * oldvel_ + maxacc_ * dtot_);
+        tacc_ = (vels_t_ - std::abs(oldvel_)) / maxacc_;
+        dacc_ = tacc_ * (vels_t_ + std::abs(oldvel_)) / 2;
+      }
+      tdec_ = vels_t_ / maxacc_;
+      ddec_ = tdec_ * (vels_t_) / 2;
+    }
+  }
 }
 
+void MotionGenerator::updateTrapezoidalProfile(double timestep) {
 
-void MotionGenerator::calculateTrapezoidalProfile(float posRef) {
+  double t = static_cast<double>(timestep) /
+             1000; // conversion from milliseconds to seconds
 
-	float t = static_cast<float> (deltaTime) / 1000;	// conversion from milliseconds to seconds				
-	
-	if (shape)   // trapezoidal shape
-	{
-		if (t <= (tBrk+tAcc))
-		{
-			pos = oldPos + oldVel*t + signM * 0.5*maxAcc*t*t;
-			vel = oldVel + signM * maxAcc*t;
-			acc = signM * maxAcc;
-		}
-		else if (t > (tBrk+tAcc) && t < (tBrk+tAcc+tVel))
-		{
-			pos = oldPos + signM * (-dBrk + dAcc + maxVel*(t-tBrk-tAcc));
-			vel = signM * maxVel;
-			acc = 0;
-		}
-		else if (t >= (tBrk+tAcc+tVel) && t < (tBrk+tAcc+tVel+tDec))
-		{
-			pos = oldPos + signM * (-dBrk + dAcc + dVel + maxVel*(t-tBrk-tAcc-tVel) - 0.5*maxAcc*(t-tBrk-tAcc-tVel)*(t-tBrk-tAcc-tVel));
-			vel = signM * (maxVel - maxAcc*(t-tBrk-tAcc-tVel));
-			acc = - signM * maxAcc;
-		}
-		else
-		{
-			pos = posRef;
-			vel = 0;
-			acc = 0;
-			isFinished = true;
-		}
-	}
-	else            // triangular shape
-	{
-		if (t <= (tBrk+tAcc))
-		{
-			pos = oldPos + oldVel*t + signM * 0.5*maxAcc*t*t;
-			vel = oldVel + signM * maxAcc*t;
-			acc = signM * maxAcc;
-		}
-		else if (t > (tBrk+tAcc) && t < (tBrk+tAcc+tDec))
-		{
-			pos = oldPos + signM * (-dBrk + dAcc + velSt*(t-tBrk-tAcc) - 0.5*maxAcc*(t-tBrk-tAcc)*(t-tBrk-tAcc));
-			vel = signM * (velSt - maxAcc*(t-tBrk-tAcc));
-			acc = - signM * maxAcc;
-		}
-		else
-		{
-			pos = posRef;
-			vel = 0;
-			acc = 0;
-			isFinished = true;
-		}
-		
-	}
-
-} 
+  if (shape_) // trapezoidal shape
+  {
+    if (t <= (tbrk_ + tacc_)) {
+      pos_ = oldpos_ + oldvel_ * t + signm_ * 0.5 * maxacc_ * t * t;
+      vel_ = oldvel_ + signm_ * maxacc_ * t;
+      acc_ = signm_ * maxacc_;
+    } else if (t > (tbrk_ + tacc_) && t < (tbrk_ + tacc_ + tvel_)) {
+      pos_ =
+          oldpos_ + signm_ * (-dbrk_ + dacc_ + maxvel_ * (t - tbrk_ - tacc_));
+      vel_ = signm_ * maxvel_;
+      acc_ = 0;
+    } else if (t >= (tbrk_ + tacc_ + tvel_) &&
+               t < (tbrk_ + tacc_ + tvel_ + tdec_)) {
+      pos_ = oldpos_ + signm_ * (-dbrk_ + dacc_ + dvel_ +
+                                 maxvel_ * (t - tbrk_ - tacc_ - tvel_) -
+                                 0.5 * maxacc_ * (t - tbrk_ - tacc_ - tvel_) *
+                                     (t - tbrk_ - tacc_ - tvel_));
+      vel_ = signm_ * (maxvel_ - maxacc_ * (t - tbrk_ - tacc_ - tvel_));
+      acc_ = -signm_ * maxacc_;
+    } else {
+      pos_ = posref_;
+      vel_ = 0;
+      acc_ = 0;
+      isfinished_ = true;
+    }
+  } else // triangular shape
+  {
+    if (t <= (tbrk_ + tacc_)) {
+      pos_ = oldpos_ + oldvel_ * t + signm_ * 0.5 * maxacc_ * t * t;
+      vel_ = oldvel_ + signm_ * maxacc_ * t;
+      acc_ = signm_ * maxacc_;
+    } else if (t > (tbrk_ + tacc_) && t < (tbrk_ + tacc_ + tdec_)) {
+      pos_ =
+          oldpos_ +
+          signm_ * (-dbrk_ + dacc_ + vels_t_ * (t - tbrk_ - tacc_) -
+                    0.5 * maxacc_ * (t - tbrk_ - tacc_) * (t - tbrk_ - tacc_));
+      vel_ = signm_ * (vels_t_ - maxacc_ * (t - tbrk_ - tacc_));
+      acc_ = -signm_ * maxacc_;
+    } else {
+      pos_ = posref_;
+      vel_ = 0;
+      acc_ = 0;
+      isfinished_ = true;
+    }
+  }
+}
 
 // Getters and setters
-bool MotionGenerator::getFinished() {
-	return isFinished;
+bool MotionGenerator::getFinished() { return isfinished_; }
+
+double MotionGenerator::getPosition() { return pos_; }
+
+double MotionGenerator::getVelocity() { return vel_; }
+
+double MotionGenerator::getAcceleration() { return acc_; }
+
+void MotionGenerator::setMaxVelocity(double aMaxvel_) { maxvel_ = aMaxvel_; }
+
+void MotionGenerator::setMaxAcceleration(double aMaxacc_) {
+  maxacc_ = aMaxacc_;
 }
 
-float MotionGenerator::getVelocity() {
-	return vel;
+void MotionGenerator::setInitPosition(double aInitpos_) {
+  initpos_ = aInitpos_;
+  pos_ = aInitpos_;
+  oldpos_ = aInitpos_;
 }
 
-float MotionGenerator::getAcceleration() {
-	return acc;
-}
-
-void MotionGenerator::setMaxVelocity(float aMaxVel) {
-	maxVel = aMaxVel;
-}
-
-void MotionGenerator::setMaxAcceleration(float aMaxAcc) {
-	maxAcc = aMaxAcc;
-}
-
-void MotionGenerator::setInitPosition(float aInitPos) {
-	initPos 	= aInitPos;
-	pos 		= aInitPos;
-	oldPos 		= aInitPos;
-}
-
-short int MotionGenerator::sign(float aVal) {
-	if (aVal < 0)
-		return -1;
-	else if (aVal > 0)
-		return 1;
-	else
-		return 0;
+short int MotionGenerator::sign(double aVal) {
+  if (aVal < 0)
+    return -1;
+  else if (aVal > 0)
+    return 1;
+  else
+    return 0;
 }
 
 void MotionGenerator::reset() {
-	// Reset all state variables	
+  // Reset all state variables
 
-	pos 		= initPos;
-	oldPos 		= initPos;
-    oldPosRef 	= 0;
-	vel 		= 0;
-	acc 		= 0;
-	oldVel 		= 0;
-	
-	dBrk 		= 0;
-	dAcc 		= 0;
-	dVel 		= 0;
-	dDec 		= 0;
-	dTot 		= 0;
-	
-	tBrk 		= 0;
-	tAcc 		= 0;
-	tVel 		= 0;
-	tDec 		= 0;
-	
-	velSt 		= 0;
+  pos_ = initpos_;
+  oldpos_ = initpos_;
+  vel_ = 0;
+  acc_ = 0;
+  oldvel_ = 0;
+
+  dbrk_ = 0;
+  dacc_ = 0;
+  dvel_ = 0;
+  ddec_ = 0;
+  dtot_ = 0;
+
+  tbrk_ = 0;
+  tacc_ = 0;
+  tvel_ = 0;
+  tdec_ = 0;
+
+  vels_t_ = 0;
 }

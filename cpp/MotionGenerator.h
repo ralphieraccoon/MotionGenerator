@@ -1,12 +1,6 @@
 #ifndef __MOTIONGENERATOR_H__
 #define __MOTIONGENERATOR_H__
 
-#if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
-
 /**
  * Generates the analytical solution for the trapezoidal motion.
  *
@@ -26,14 +20,14 @@
  MotionGenerator *trapezoidalProfile = new MotionGenerator(100, 400, 0);
 
  // Retrieve calculated position
- float positionRef = 1000;
- float position = trapezoidalProfile->update(positionRef)
+ double positionRef = 1000;
+ double position = trapezoidalProfile->update(positionRef)
 
  // Retrieve current velocity
- float velocity = trapezoidalProfile->getVelocity();
+ double velocity = trapezoidalProfile->getVelocity();
 
  // Retrieve current acceleration
- float acceleration = trapezoidalProfile->getAcceleration();
+ double acceleration = trapezoidalProfile->getAcceleration();
 
  // Check if profile is finished
  if (trapezoidalProfile->getFinished()) {};
@@ -44,77 +38,74 @@
  *
  * @author      AerDronix <aerdronix@gmail.com>
  * @web		https://aerdronix.wordpress.com/
- * @version     1.0 
+ * @version     1.0
  * @since       2016-12-22
  */
 
-class MotionGenerator {		
-	public:	
-		/**	
-		 * Constructor
-		 * 
-		 * @param int aVelocityMax maximum velocity
-		 * @param int aAccelerationMax maximum acceleration
-		 */
-		MotionGenerator(float aMaxVel, float aMaxAcc, float aInitPos);
-			
-		void init();
-		
-		/**	
-		 * Updates the state, generating new setpoints
-		 *
-		 * @param aSetpoint The current setpoint.
-		 */
-		float update(float aPosRef);
-		float getVelocity();
-		float getAcceleration();
-		
-		bool getFinished();				
-		void setMaxVelocity(float aMaxVel);
-		void setMaxAcceleration(float aMaxAcc);
-		void setInitPosition(float aInitPos);				
-		void reset();		
-		
-	private:
-		/** 	
-		 * Increments the state number.
-		 * 
-		 * @see
-		  currentState
-		 */						
-		void calculateTrapezoidalProfile(float);	
-		short int sign(float aVal);		
-		
-		float maxVel;
-		float maxAcc;		
-		float initPos;
-        	float pos;
-        	float vel;
-        	float acc;
-        	float oldPos;
-        	float oldPosRef;
-        	float oldVel;
-        
-        	float dBrk;
-        	float dAcc;
-        	float dVel;
-        	float dDec;
-        	float dTot;
-        
-        	float tBrk;
-        	float tAcc;
-        	float tVel;
-        	float tDec;
-		
-		float velSt;
-        
-        	unsigned long oldTime;
-        	unsigned long lastTime;
-        	unsigned long deltaTime;
-        
-        	short int signM;      	// 1 = positive change, -1 = negative change
-        	bool shape;      	// true = trapezoidal, false = triangular
-		
-		bool isFinished;	
+class MotionGenerator {
+public:
+  /**
+   * Constructor
+   *
+   * @param int aVelocityMax maximum velocity
+   * @param int aAccelerationMax maximum acceleration
+   */
+  MotionGenerator(double aMaxVel, double aMaxAcc, double aInitPos);
+
+  void init();
+
+  /**
+   * Updates the state, generating new setpoints
+   *
+   * @param aSetpoint The current setpoint.
+   */
+  double setPositionRef(double aPosRef);
+  double getPosition();
+  double getVelocity();
+  double getAcceleration();
+
+  bool getFinished();
+  void setMaxVelocity(double aMaxVel);
+  void setMaxAcceleration(double aMaxAcc);
+  void setInitPosition(double aInitPos);
+  void reset();
+  void updateTrapezoidalProfile(double timestep);
+
+private:
+  /**
+   * Increments the state number.
+   *
+   * @see
+    currentState
+   */
+  short int sign(double aVal);
+
+  double maxvel_;
+  double maxacc_;
+  double initpos_;
+  double pos_;
+  double posref_;
+  double vel_;
+  double acc_;
+  double oldpos_;
+  double oldvel_;
+
+  double dbrk_;
+  double dacc_;
+  double dvel_;
+  double ddec_;
+  double dtot_;
+
+  double tbrk_;
+  double tacc_;
+  double tvel_;
+  double tdec_;
+
+  double vels_t_;
+
+  short int signm_; // 1 = positive change, -1 = negative change
+  bool shape_;      // true = trapezoidal, false = triangular
+
+  bool isfinished_;
 };
 #endif
