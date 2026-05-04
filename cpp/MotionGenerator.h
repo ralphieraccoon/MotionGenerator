@@ -59,7 +59,7 @@ public:
    *
    * @param aSetpoint The current setpoint.
    */
-  double setPositionRef(double aPosRef);
+  void setPositionRef(double aPosRef);
   double getPosition();
   double getVelocity();
   double getAcceleration();

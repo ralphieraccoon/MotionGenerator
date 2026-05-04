@@ -17,7 +17,7 @@ void MotionGenerator::init() {
   isfinished_ = false;
 }
 
-double MotionGenerator::setPositionRef(double pos_Ref) {
+void MotionGenerator::setPositionRef(double pos_Ref) {
 
   if (posref_ != pos_Ref) // reference changed
   {
